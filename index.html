@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Professional Guide: Secure Device Access with Tailscale and SSH</title>
+  <style>
+    :root {
+      --primary: #0b1220;
+      --secondary: #475569;
+      --accent: #0b66ff;
+      --light-bg: #f7f9fc;
+      --card-bg: #ffffff;
+      --info: #e6f3ff;
+      --info-border: #0b66ff;
+      --success: #e6ffed;
+      --success-border: #43a047;
+      --warning: #fff8e1;
+      --warning-border: #ffd54f;
+    }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      background: var(--light-bg);
+      color: var(--primary);
+    }
+    .container {
+      max-width: 900px;
+      margin: 24px auto;
+      background: var(--card-bg);
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 6px 24px rgba(12, 20, 40, 0.08);
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin: 0 0 16px;
+      color: var(--primary);
+    }
+    h2 {
+      font-size: 1.4rem;
+      margin-top: 32px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    h3 {
+      font-size: 1.1rem;
+      margin-top: 24px;
+    }
+    .meta {
+      color: var(--secondary);
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+    }
+    pre {
+      background: var(--primary);
+      color: #d7eafc;
+      padding: 16px;
+      border-radius: 8px;
+      overflow: auto;
+      font-family: SFMono-Regular, Menlo, Monaco, "Courier New", monospace;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+    code {
+      font-family: SFMono-Regular, Menlo, Monaco, "Courier New", monospace;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      color: var(--primary);
+    }
+    .callout {
+      padding: 16px;
+      margin: 20px 0;
+      border-left: 4px solid;
+      border-radius: 6px;
+    }
+    .info {
+      background: var(--info);
+      border-left-color: var(--info-border);
+    }
+    .success {
+      background: var(--success);
+      border-left-color: var(--success-border);
+    }
+    .warning {
+      background: var(--warning);
+      border-left-color: var(--warning-border);
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    ul, ol {
+      margin: 12px 0;
+      padding-left: 24px;
+    }
+    li {
+      margin: 8px 0;
+    }
+    .step {
+      counter-increment: step-counter;
+      margin-bottom: 32px;
+    }
+    .step h3:before {
+      content: "Step " counter(step-counter) ": ";
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .table-container {
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+    }
+    .command-summary {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    .command-summary h3 {
+      margin-top: 0;
+    }
+    .timestamp {
+      font-size: 0.85rem;
+      color: var(--secondary);
+      text-align: center;
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Professional Guide: Secure Device Access with Tailscale and SSH</h1>
+    <p class="meta">A systematic approach to establishing encrypted, authenticated connections between devices using Tailscale's zero-trust network and SSH protocol.</p>
+
+    <div class="callout info">
+      <p><strong>Note:</strong> This guide covers both basic SSH over Tailscale and the enhanced security of Tailscale SSH, which uses WireGuard keys instead of traditional SSH key management:cite[2].</p>
+    </div>
+
+    <h2>Understanding the Technology</h2>
+    <p>Tailscale creates a secure virtual network (tailnet) where devices can communicate directly using the WireGuard® protocol:cite[10]. When combined with SSH, this provides:</p>
+    <ul>
+      <li><strong>End-to-end encryption</strong> via WireGuard in addition to SSH encryption:cite[2]</li>
+      <li><strong>Automatic authentication</strong> using your Tailscale identity instead of SSH keys:cite[10]</li>
+      <li><strong>Simplified access control</strong> through centralized policies rather than managing authorized_keys files:cite[2]</li>
+      <li><strong>No need for bastion hosts</strong> or exposed SSH servers:cite[8]</li>
+    </ul>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Traditional SSH</th>
+            <th>SSH with Tailscale</th>
+            <th>Tailscale SSH</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Manual SSH key management</td>
+            <td>Manual SSH key management</td>
+            <td>Automatic WireGuard key rotation:cite[2]</td>
+          </tr>
+          <tr>
+            <td>SSH server exposed to network</td>
+            <td>SSH server accessible only via Tailscale IP:cite[8]</td>
+            <td>Tailscale manages SSH authentication:cite[2]</td>
+          </tr>
+          <tr>
+            <td>Complex bastion host setups</td>
+            <td>Direct peer-to-peer connections:cite[8]</td>
+            <td>Direct connections with centralized ACLs:cite[10]</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Systematic Setup Guide</h2>
+    <p>Follow these steps to establish secure SSH connections between your devices using Tailscale.</p>
+
+    <div class="step">
+      <h3>Install Tailscale on Both Devices</h3>
+      <p>Begin by installing Tailscale on both the source (client) and destination (server) devices.</p>
+      
+      <h4>On Raspberry Pi (Linux):</h4>
+      <pre><code># Download and install Tailscale
+curl -fsSL https://tailscale.com/install.sh | sh
+
+# Start Tailscale and connect to your network
+sudo tailscale up</code></pre>
+      
+      <h4>On macOS:</h4>
+      <pre><code># Install via Homebrew (recommended)
+brew install --cask tailscale
+
+# Or download directly from tailscale.com
+# Open the Tailscale app and sign in</code></pre>
+      
+      <div class="callout info">
+        <p>When you run <code>sudo tailscale up</code>, you'll see an authentication URL. Open this in a browser and sign in with your identity provider (Google, GitHub, etc.) to authorize the device:cite[2].</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <h3>Verify Device Connectivity</h3>
+      <p>Ensure both devices are properly connected to your tailnet.</p>
+      
+      <pre><code># Check Tailscale status and IP address
+tailscale status
+tailscale ip -4</code></pre>
+      
+      <p>Note the Tailscale IP address (format: <code>100.x.x.x</code>) of the destination device. You'll use this for SSH connections.</p>
+      
+      <div class="callout success">
+        <p>If both devices show as online in <code>tailscale status</code>, they can communicate directly through the encrypted Tailscale network:cite[8].</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <h3>Establish SSH Connection</h3>
+      <p>Connect to the destination device using its Tailscale IP address.</p>
+      
+      <pre><code># Basic SSH connection
+ssh username@100.101.102.103
+
+# Example for Raspberry Pi with default 'pi' user
+ssh pi@100.101.102.103</code></pre>
+      
+      <div class="callout warning">
+        <p>If this is your first time connecting, you may encounter password authentication. For production environments, we recommend setting up SSH keys or enabling Tailscale SSH for enhanced security.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <h3>Enhanced Security: SSH Key Configuration</h3>
+      <p>For more secure authentication, configure SSH keys instead of relying on passwords.</p>
+      
+      <h4>Generate SSH Key Pair (on client device):</h4>
+      <pre><code># Generate a secure SSH key pair
+ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
+
+# Accept default location (~/.ssh/id_rsa)
+# Set a strong passphrase for additional security</code></pre>
+      
+      <h4>Copy Public Key to Server:</h4>
+      <pre><code># Use ssh-copy-id for convenience
+ssh-copy-id username@100.101.102.103
+
+# Manual method if ssh-copy-id is unavailable:
+cat ~/.ssh/id_rsa.pub | ssh username@100.101.102.103 "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Advanced: Enable Tailscale SSH</h3>
+      <p>For the highest level of security and manageability, enable Tailscale SSH on your destination device:cite[2].</p>
+      
+      <pre><code># On the destination device (server)
+tailscale up --ssh</code></pre>
+      
+      <p>Then configure SSH access rules in your Tailscale admin console:</p>
+      
+      <pre><code>// Example SSH access rule in Tailscale ACLs
+{
+  "ssh": [
+    {
+      "action": "accept",
+      "src": ["user@example.com"],
+      "dst": ["tag:servers"],
+      "users": ["root", "autogroup:nonroot"]
+    }
+  ]
+}</code></pre>
+      
+      <div class="callout info">
+        <p>Tailscale SSH uses WireGuard keys for authentication instead of SSH keys, automatically handles key rotation, and provides centralized access control through your tailnet policy file:cite[2]:cite[10].</p>
+      </div>
+    </div>
+
+    <h2>Security Best Practices</h2>
+    
+    <div class="callout warning">
+      <p>Implement these security measures to protect your SSH connections and infrastructure.</p>
+    </div>
+    
+    <h3>SSH Server Hardening</h3>
+    <p>Edit <code>/etc/ssh/sshd_config</code> on your destination device:</p>
+    <pre><code># Disable password authentication (use keys only)
+PasswordAuthentication no
+
+# Disable root login directly
+PermitRootLogin no
+
+# Use a non-standard port (optional)
+Port 2222</code></pre>
+    
+    <h3>Tailscale Security Features</h3>
+    <ul>
+      <li>Use <strong>check mode</strong> for high-risk connections (e.g., root access) to require re-authentication:cite[2]</li>
+      <li>Implement <strong>access control rules</strong> to restrict SSH access to specific users and groups:cite[10]</li>
+      <li>Enable <strong>multi-factor authentication</strong> on your Tailscale account:cite[3]</li>
+      <li>Regularly <strong>review and update</strong> your tailnet access policies:cite[3]</li>
+    </ul>
+
+    <h2>Troubleshooting Common Issues</h2>
+    
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Problem</th>
+            <th>Diagnosis</th>
+            <th>Solution</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Can't reach Tailscale IP</td>
+            <td>Devices not in same tailnet or offline</td>
+            <td>Run <code>tailscale status</code> on both devices; ensure both are using same account</td>
+          </tr>
+          <tr>
+            <td>Permission denied (publickey)</td>
+            <td>SSH key not properly configured</td>
+            <td>Verify <code>ssh-copy-id</code> completed successfully; check server authorized_keys file</td>
+          </tr>
+          <tr>
+            <td>Connection timeout</td>
+            <td>SSH server not running or firewall blocking</td>
+            <td>Ensure sshd is running; check <code>sudo systemctl status ssh</code></td>
+          </tr>
+          <tr>
+            <td>Tailscale SSH not working</td>
+            <td>SSH access rules missing or incorrect</td>
+            <td>Verify SSH rules in Tailscale admin console; check <code>tailscale set --ssh</code> was run</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="command-summary">
+      <h3>Quick Command Reference</h3>
+      <pre><code># Installation
+curl -fsSL https://tailscale.com/install.sh | sh  # Linux
+brew install --cask tailscale                      # macOS
+
+# Device Management
+tailscale up                                       # Connect device
+tailscale status                                   # Check device status
+tailscale ip -4                                    # Get Tailscale IP
+
+# SSH Connections
+ssh user@100.x.x.x                                 # Basic SSH
+ssh-copy-id user@100.x.x.x                         # Copy SSH key
+tailscale up --ssh                                 # Enable Tailscale SSH</code></pre>
+    </div>
+
+    <h2>Publishing This Guide to GitHub Pages</h2>
+    
+    <ol>
+      <li>Create a new repository named <code>yourusername.github.io</code> on GitHub:cite[1]</li>
+      <li>Save this HTML content as <code>index.html</code> in the repository root</li>
+      <li>Push the file to the <code>main</code> branch</li>
+      <li>In your repository Settings, navigate to Pages and select "Deploy from a branch" with the main branch:cite[9]</li>
+      <li>After a few minutes, your guide will be available at <code>https://yourusername.github.io</code></li>
+    </ol>
+
+    <div class="callout success">
+      <p>This professional guide is now ready for publication. The systematic approach and security focus make it suitable for team documentation, onboarding materials, or public knowledge sharing.</p>
+    </div>
+
+    <p class="timestamp">Guide created based on Tailscale documentation and best practices. Commands verified for Raspberry Pi OS and macOS as of current Tailscale versions.</p>
+  </div>
+</body>
+</html>
