@@ -282,6 +282,19 @@
       color: #b36a00;
     }
     
+    .account-management {
+      background: #e8f5e9;
+      border: 1px solid #4caf50;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    
+    .account-management h3 {
+      margin-top: 0;
+      color: #2e7d32;
+    }
+    
     @media (max-width: 768px) {
       body {
         padding: 10px;
@@ -410,10 +423,7 @@ sudo systemctl status ssh</code></pre>
       
       <h4>On Linux/Raspberry Pi:</h4>
       <pre><code># Download and execute Tailscale installation script
-curl -fsSL https://tailscale.com/install.sh | sh
-
-# Authenticate device with your tailnet
-sudo tailscale up</code></pre>
+curl -fsSL https://tailscale.com/install.sh | sh</code></pre>
       
       <h4>On macOS:</h4>
       <pre><code># Install via Homebrew (recommended for development environments)
@@ -423,7 +433,30 @@ brew install --cask tailscale
 # Launch Tailscale application and authenticate</code></pre>
       
       <div class="callout info">
-        <p>When executing <code>sudo tailscale up</code>, you'll receive an authentication URL. Open this in a browser and sign in with your identity provider (Google, GitHub, Microsoft, etc.) to authorize the device.</p>
+        <p>After installation, you'll need to authenticate your device with your Tailscale account using the commands in the next step.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <h3>Account Management: Connect to Tailscale</h3>
+      <p>Authenticate your device with your Tailscale account to join the secure tailnet.</p>
+      
+      <h4>Log out of any existing account (if needed):</h4>
+      <pre><code># If your device is already connected to another account:
+sudo tailscale logout</code></pre>
+      
+      <h4>Log in with your account:</h4>
+      <pre><code># Connect device to your tailnet
+sudo tailscale up</code></pre>
+      
+      <p>After running <code>sudo tailscale up</code>, you'll receive an authentication URL:</p>
+      <pre><code>To authenticate, visit:
+https://login.tailscale.com/a/xxxxxxx</code></pre>
+      
+      <p>Open this URL in a browser and sign in with your identity provider (Google, GitHub, Microsoft, etc.) to authorize the device.</p>
+      
+      <div class="callout success">
+        <p><strong>Account Switching:</strong> The logout/login process is essential when transferring device ownership between accounts or organizations. This ensures clean authentication without conflicts.</p>
       </div>
     </div>
 
@@ -504,6 +537,29 @@ tailscale up --ssh</code></pre>
       </div>
     </div>
 
+    <h2>Account Management Operations</h2>
+    
+    <div class="account-management">
+      <h3>Managing Tailscale Accounts on Devices</h3>
+      <p>These operations are essential for device lifecycle management, ownership transfers, and troubleshooting authentication issues.</p>
+      
+      <h4>Check Current Account Status:</h4>
+      <pre><code># Display current device authentication status
+tailscale status --json | jq '.Self.UserID'</code></pre>
+      
+      <h4>Logout from Current Account:</h4>
+      <pre><code># Disconnect device from current tailnet
+sudo tailscale logout</code></pre>
+      
+      <h4>Login with New Account:</h4>
+      <pre><code># Re-authenticate device with different account
+sudo tailscale up</code></pre>
+      
+      <h4>View Detailed Device Information:</h4>
+      <pre><code># Comprehensive device status and configuration
+tailscale status --verbose</code></pre>
+    </div>
+
     <h2>Security Hardening & Best Practices</h2>
     
     <div class="callout warning">
@@ -568,6 +624,11 @@ LoginGraceTime 60</code></pre>
             <td>SSH access policies missing or incorrect</td>
             <td>Validate SSH rules in Tailscale admin console; confirm <code>tailscale up --ssh</code> execution</td>
           </tr>
+          <tr>
+            <td>Authentication URL not working</td>
+            <td>Device already authenticated to different account</td>
+            <td>Execute <code>sudo tailscale logout</code> then <code>sudo tailscale up</code> for clean authentication</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -585,7 +646,10 @@ sudo systemctl status ssh
 curl -fsSL https://tailscale.com/install.sh | sh    # Linux
 brew install --cask tailscale                        # macOS
 
-tailscale up                                         # Connect device to tailnet
+# Account Management
+sudo tailscale logout                                # Disconnect from current account
+sudo tailscale up                                    # Connect to tailnet (new auth)
+
 tailscale status                                     # Verify device connectivity
 tailscale ip -4                                      # Retrieve Tailscale IP
 
